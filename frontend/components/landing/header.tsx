@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import Image from "next/image"
 import { useStellar } from "@/components/web3-provider"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { useToast } from "@/hooks/use-toast"
 import { Copy, Check, ExternalLink, LogOut, ChevronDown } from "lucide-react"
 import {
@@ -73,6 +74,16 @@ export function Header() {
           </nav>
 
           <div className="flex items-center gap-4">
+            <ThemeToggle />
+            {isConnected ? (
+              <>
+                <Button variant="ghost" asChild className="hidden sm:flex">
+                  <Link href="/dashboard">Dashboard</Link>
+                </Button>
+                <Button onClick={disconnect} variant="outline">
+                  {address?.slice(0, 6)}...{address?.slice(-4)}
+                </Button>
+              </>
             {address ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

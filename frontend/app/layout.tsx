@@ -6,6 +6,7 @@ import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { Web3Provider } from "@/components/web3-provider"
+import { ThemeProvider } from "@/components/theme-provider"
 import { Suspense } from "react"
 
 export const metadata: Metadata = {
@@ -36,11 +37,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <Suspense fallback={null}>
-          <Web3Provider>{children}</Web3Provider>
-        </Suspense>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+          <Suspense fallback={null}>
+            <Web3Provider>{children}</Web3Provider>
+          </Suspense>
+        </ThemeProvider>
         <Analytics />
         <Toaster />
       </body>
