@@ -276,6 +276,114 @@ fn test_fee_deduction() {
     assert_eq!(token_interface_client.balance(&relayer), 200);
 }
 
+#[test]
+fn test_pool_marks_inactive() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, RotationalPool);
+    let client = RotationalPoolClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let token_contract = env.register_stellar_asset_contract_v2(token_admin.clone());
+    let token_address = token_contract.address();
+    let token_client = token::StellarAssetClient::new(&env, &token_address);
+
+    let treasury = Address::generate(&env);
+    let relayer = Address::generate(&env);
+    let member_a = Address::generate(&env);
+    let member_b = Address::generate(&env);
+
+    let mut members = Vec::new(&env);
+    members.push_back(member_a.clone());
+    members.push_back(member_b.clone());
+
+    client.initialize(
+        &token_address,
+        &members,
+        &100i128,
+        &100u64,
+        &0u32,
+        &0u32,
+        &treasury,
+    );
+
+    // Mints
+    token_client.mint(&member_a, &200i128);
+    token_client.mint(&member_b, &200i128);
+
+    // ROUND 0
+    client.deposit(&member_a);
+    client.deposit(&member_b);
+    env.ledger().set_timestamp(100);
+    client.trigger_payout(&relayer);
+
+    assert!(client.is_active());
+    assert_eq!(client.current_round(), 1);
+
+    // ROUND 1
+    client.deposit(&member_a);
+    client.deposit(&member_b);
+    env.ledger().set_timestamp(200);
+    client.trigger_payout(&relayer);
+
+    // Now the pool should be inactive (as both rounds are completed)
+    assert!(!client.is_active());
+}
+
+#[test]
+#[should_panic(expected = "pool inactive")]
+fn test_deposit_inactive_pool() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, RotationalPool);
+    let client = RotationalPoolClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let token_contract = env.register_stellar_asset_contract_v2(token_admin.clone());
+    let token_address = token_contract.address();
+    let token_client = token::StellarAssetClient::new(&env, &token_address);
+
+    let treasury = Address::generate(&env);
+    let relayer = Address::generate(&env);
+    let member_a = Address::generate(&env);
+    let member_b = Address::generate(&env);
+
+    let mut members = Vec::new(&env);
+    members.push_back(member_a.clone());
+    members.push_back(member_b.clone());
+
+    client.initialize(
+        &token_address,
+        &members,
+        &100i128,
+        &100u64,
+        &0u32,
+        &0u32,
+        &treasury,
+    );
+
+    token_client.mint(&member_a, &200i128);
+    token_client.mint(&member_b, &200i128);
+
+    // Round 0
+    client.deposit(&member_a);
+    client.deposit(&member_b);
+    env.ledger().set_timestamp(100);
+    client.trigger_payout(&relayer);
+
+    // Round 1
+    client.deposit(&member_a);
+    client.deposit(&member_b);
+    env.ledger().set_timestamp(200);
+    client.trigger_payout(&relayer);
+
+    // Now inactive. Try to deposit again:
+    client.deposit(&member_a);
+}
+
+
 
 
 
