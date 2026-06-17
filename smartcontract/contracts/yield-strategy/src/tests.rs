@@ -14,16 +14,19 @@ mod mock_soroswap {
 
     #[contractimpl]
     impl MockSoroswapRouter {
-        pub fn add_liq(_env: Env, _ta: Address, _tb: Address, amount_a: i128, _amount_b: i128, _to: Address) -> i128 {
-            amount_a
+        /// Tokens are already transferred to this contract before add_liq is called.
+        pub fn add_liq(_env: Env, _token: Address, _amount: i128) {}
+
+        /// Transfer `amount` tokens from this router back to `to`.
+        pub fn rem_liq(env: Env, token: Address, amount: i128, to: Address) -> i128 {
+            token::Client::new(&env, &token)
+                .transfer(&env.current_contract_address(), &to, &amount);
+            amount
         }
-        pub fn rem_liq(env: Env, token_a: Address, _tb: Address, lp_amount: i128, to: Address) -> i128 {
-            token::Client::new(&env, &token_a)
-                .transfer(&env.current_contract_address(), &to, &lp_amount);
-            lp_amount
-        }
-        pub fn get_pos(_env: Env, _ta: Address, _tb: Address, _account: Address) -> i128 {
-            550 // deployed 500 + 50 yield
+
+        /// Return simulated position value: principal + 50 yield.
+        pub fn get_pos(_env: Env, _token: Address, _account: Address) -> i128 {
+            550
         }
     }
 }
@@ -39,14 +42,16 @@ mod mock_amm {
 
     #[contractimpl]
     impl MockAmmPool {
-        pub fn deposit(_env: Env, _token: Address, amount: i128, _to: Address) -> i128 {
-            amount
-        }
+        /// Tokens are already transferred to this pool before deposit is called.
+        pub fn deposit(_env: Env, _token: Address, _amount: i128) {}
+
+        /// Transfer `amount` tokens from this pool back to `to`.
         pub fn withdraw(env: Env, token: Address, amount: i128, to: Address) -> i128 {
             token::Client::new(&env, &token)
                 .transfer(&env.current_contract_address(), &to, &amount);
             amount
         }
+
         pub fn get_pos(_env: Env, _token: Address, _account: Address) -> i128 {
             550
         }

@@ -1,49 +1,49 @@
-use soroban_sdk::{symbol_short, Address, Env, IntoVal};
+use soroban_sdk::{symbol_short, token, Address, Env, IntoVal};
 
-/// Single-asset deposit into Soroswap via the router's `add_liq` entry point.
-/// `amount_b = 0` signals a one-sided deposit.
+/// Deposit into Soroswap: transfer tokens to router, then invoke add_liq.
 /// Funds must already be in this contract before calling.
 pub fn add_liquidity(
     env: &Env,
     router: &Address,
     token_a: &Address,
-    token_b: &Address,
+    _token_b: &Address,
     amount_a: i128,
-    amount_b: i128,
-    to: &Address,
+    _amount_b: i128,
+    _to: &Address,
 ) -> i128 {
-    let _lp: i128 = env.invoke_contract(
+    // Transfer tokens from this contract to the router
+    token::Client::new(env, token_a)
+        .transfer(&env.current_contract_address(), router, &amount_a);
+
+    // Notify the router to record the deposit
+    let _: () = env.invoke_contract(
         router,
         &symbol_short!("add_liq"),
         soroban_sdk::vec![
             env,
             token_a.into_val(env),
-            token_b.into_val(env),
             amount_a.into_val(env),
-            amount_b.into_val(env),
-            to.into_val(env),
         ],
     );
     amount_a
 }
 
-/// Withdraw `lp_amount` from the Soroswap pair back to `to`.
-/// Returns the recovered token_a amount.
+/// Withdraw from Soroswap: invoke rem_liq on router, which transfers tokens back.
 pub fn remove_liquidity(
     env: &Env,
     router: &Address,
     token_a: &Address,
-    token_b: &Address,
+    _token_b: &Address,
     lp_amount: i128,
     to: &Address,
 ) -> i128 {
+    // Router transfers tokens directly to `to`
     let recovered: i128 = env.invoke_contract(
         router,
         &symbol_short!("rem_liq"),
         soroban_sdk::vec![
             env,
             token_a.into_val(env),
-            token_b.into_val(env),
             lp_amount.into_val(env),
             to.into_val(env),
         ],
@@ -51,13 +51,12 @@ pub fn remove_liquidity(
     recovered
 }
 
-/// Query the Soroswap router for the current value of this contract's position.
-/// Calls `get_pos` on the router, which returns the token_a-equivalent value.
+/// Query the Soroswap router for the current position value of `account`.
 pub fn get_position_value(
     env: &Env,
     router: &Address,
     token_a: &Address,
-    token_b: &Address,
+    _token_b: &Address,
     account: &Address,
 ) -> i128 {
     env.invoke_contract(
@@ -66,7 +65,6 @@ pub fn get_position_value(
         soroban_sdk::vec![
             env,
             token_a.into_val(env),
-            token_b.into_val(env),
             account.into_val(env),
         ],
     )
